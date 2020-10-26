@@ -26,8 +26,6 @@ func All(ctx context.Context, phrase string, files []string) <-chan []Result {
 	ch := make(chan []Result)
 	wg := sync.WaitGroup{}
 
-	//var results []Result
-
 	ctx, cancel := context.WithCancel(ctx)
 
 	for i := 0; i < len(files); i++ {
@@ -36,7 +34,7 @@ func All(ctx context.Context, phrase string, files []string) <-chan []Result {
 		go func(ctx context.Context, path string, i int, ch chan<- []Result) {
 			defer wg.Done()
 
-			res := FindAllMatchTextInFile(phrase, path)
+			res := FindAllMatch(phrase, path)
 
 			if len(res) > 0 {
 				ch <- res
@@ -56,7 +54,7 @@ func All(ctx context.Context, phrase string, files []string) <-chan []Result {
 }
 
 //FindAllMatchTextInFile ...
-func FindAllMatchTextInFile(phrase, path string) (res []Result) {
+func FindAllMatch(phrase, path string) (res []Result) {
     file, err := os.Open(path)
     if err != nil {
 		log.Println("error not opened file err => ", err)
@@ -70,13 +68,13 @@ func FindAllMatchTextInFile(phrase, path string) (res []Result) {
         lines = append(lines, scanner.Text())
 	}
 
-	for i:=0; i <= len(lines); i++ {
+	for i:=0; i < len(lines); i++ {
 		
 		if strings.Contains(lines[i], phrase) {
-
+			line := lines[i]
 			r := Result{
 				Phrase:  phrase,
-				Line:    lines[i],
+				Line:    line,
 				LineNum: int64(i + 1),
 				ColNum:  int64(strings.Index(lines[i], phrase)) + 1,
 			}
@@ -86,31 +84,3 @@ func FindAllMatchTextInFile(phrase, path string) (res []Result) {
 	}
     return res
 }
-
-	/*data, err := ioutil.ReadFile(path)
-	if err != nil {
-		log.Println("error not opened file err => ", err)
-		return res
-	}
-
-	file := string(data)
-
-	temp := strings.Split(file, "\n")
-
-	for i, line := range temp {
-		
-		if strings.Contains(line, phrase) {
-
-			r := Result{
-				Phrase:  phrase,
-				Line:    line,
-				LineNum: int64(i + 1),
-				ColNum:  int64(strings.Index(line, phrase)) + 1,
-			}
-
-			res = append(res, r)
-		}
-	}
-
-	return res 
-} */
