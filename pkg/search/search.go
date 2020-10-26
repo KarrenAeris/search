@@ -53,7 +53,38 @@ func All(ctx context.Context, phrase string, files []string) <-chan []Result {
 	return ch
 }
 
-//FindAllMatchTextInFile ...
+//Any ищет первое появление фразы в текстовых файлах files
+func Any(ctx context.Context, phrase string, files []string) <-chan Result {
+	ch := make(chan Result)
+	wg := sync.WaitGroup{}
+
+	ctx, cancel := context.WithCancel(ctx)
+
+	for i := 0; i < len(files); i++ {
+		wg.Add(1)
+
+		go func(ctx context.Context, path string, i int, ch chan<- Result) {
+			defer wg.Done()
+
+			res := FindAllMatch(phrase, path)
+
+			result := res[0]
+			ch <- result
+
+		}(ctx, files[i], i, ch)
+	}
+
+	go func() {
+		defer close(ch)
+		wg.Wait()
+
+	}()
+
+	cancel()
+	return ch
+}
+
+//FindAllMatch делит текст на слайс из линий и ищет все возможные появления фразы, сохраняя это в массив
 func FindAllMatch(phrase, path string) (res []Result) {
     file, err := os.Open(path)
     if err != nil {
