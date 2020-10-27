@@ -68,8 +68,11 @@ func Any(ctx context.Context, phrase string, files []string) <-chan Result {
 
 			res := FindAllMatch(phrase, path)
 
-			result := res[0]
-			ch <- result
+			if len(res) >= 0 {
+				result := res[0]
+				ch <- result
+			}
+			
 
 		}(ctx, files[i], i, ch)
 	}
