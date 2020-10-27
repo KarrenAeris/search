@@ -56,31 +56,25 @@ func All(ctx context.Context, phrase string, files []string) <-chan []Result {
 
 //Any ищет первое появление фразы в текстовых файлах files
 func Any(ctx context.Context, phrase string, files []string) <-chan Result {
-	ch := make(chan Result)
+	resultChan := make(chan Result)
 	wg := sync.WaitGroup{}
 	result := Result{}
 
-	ctx, cancel := context.WithCancel(ctx)
-
-	for _, f := range files {
-		file, err := ioutil.ReadFile(f)
+	for i := 0; i < len(files); i++ {
+		data, err := ioutil.ReadFile(files[i])
 		if err != nil {
 			log.Println("error while open file: ", err)
 		}
 
-		if strings.Contains(string(file), phrase) {
-			res, err := FindAny(phrase, string(file))
-			if err != nil {
-				log.Println("error while open file: ", err)
-			}
-
+		if strings.Contains(string(data), phrase) {
+			res := FindAny(phrase, string(data))
 			if (Result{}) != res {
 				result = res
 				break
 			}
 		}
-
 	}
+	log.Println("find result: ", result)
 
 	wg.Add(1)
 	go func(ctx context.Context, ch chan<- Result) {
@@ -88,16 +82,13 @@ func Any(ctx context.Context, phrase string, files []string) <-chan Result {
 		if (Result{}) != result {
 			ch <- result
 		}
-	}(ctx, ch)
+	}(ctx, resultChan)
 
 	go func() {
-		defer close(ch)
+		defer close(resultChan)
 		wg.Wait()
-
 	}()
-
-	cancel()
-	return ch
+	return resultChan
 }
 
 
@@ -134,18 +125,16 @@ func FindAllMatch(phrase, path string) (res []Result) {
 }
 
 //FindAny ...
-func FindAny(phrase, path string) (Result, error) {
-	var lines []string
-	res := Result{}
-	for i := 0; i < len(lines); i++ {
-		if strings.Contains(lines[i], phrase) {
-			res = Result{
+func FindAny(phrase, search string) (result Result) {
+	for i, line := range strings.Split(search, "\n") {
+		if strings.Contains(line, phrase) {
+			return Result{
 				Phrase:  phrase,
-				Line:    lines[i],
+				Line:    line,
 				LineNum: int64(i + 1),
-				ColNum:  int64(strings.Index(lines[i], phrase)) + 1,
+				ColNum:  int64(strings.Index(line, phrase)) + 1,
 			}
 		}
 	}
-	return res, nil
+	return result
 }
