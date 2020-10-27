@@ -7,6 +7,7 @@ import (
 	"log"
 	"strings"
 	"sync"
+	"io/ioutil"
 )
 
 //Result описывает один результат поиска
@@ -57,25 +58,37 @@ func All(ctx context.Context, phrase string, files []string) <-chan []Result {
 func Any(ctx context.Context, phrase string, files []string) <-chan Result {
 	ch := make(chan Result)
 	wg := sync.WaitGroup{}
+	result := Result{}
 
 	ctx, cancel := context.WithCancel(ctx)
 
-	for i := 0; i < len(files); i++ {
-		wg.Add(1)
+	for _, f := range files {
+		file, err := ioutil.ReadFile(f)
+		if err != nil {
+			log.Println("error while open file: ", err)
+		}
 
-		go func(ctx context.Context, path string, i int, ch chan<- Result) {
-			defer wg.Done()
-
-			res := FindAllMatch(phrase, path)
-
-			if len(res) >= 0 {
-				result := res[0]
-				ch <- result
+		if strings.Contains(string(file), phrase) {
+			res, err := FindAny(phrase, string(file))
+			if err != nil {
+				log.Println("error while open file: ", err)
 			}
-			
 
-		}(ctx, files[i], i, ch)
+			if (Result{}) != res {
+				result = res
+				break
+			}
+		}
+
 	}
+
+	wg.Add(1)
+	go func(ctx context.Context, ch chan<- Result) {
+		defer wg.Done()
+		if (Result{}) != result {
+			ch <- result
+		}
+	}(ctx, ch)
 
 	go func() {
 		defer close(ch)
@@ -86,6 +99,7 @@ func Any(ctx context.Context, phrase string, files []string) <-chan Result {
 	cancel()
 	return ch
 }
+
 
 //FindAllMatch делит текст на слайс из линий и ищет все возможные появления фразы, сохраняя это в массив
 func FindAllMatch(phrase, path string) (res []Result) {
@@ -117,4 +131,21 @@ func FindAllMatch(phrase, path string) (res []Result) {
 		}
 	}
     return res
+}
+
+//FindAny ...
+func FindAny(phrase, path string) (Result, error) {
+	var lines []string
+	res := Result{}
+	for i := 0; i < len(lines); i++ {
+		if strings.Contains(lines[i], phrase) {
+			res = Result{
+				Phrase:  phrase,
+				Line:    lines[i],
+				LineNum: int64(i + 1),
+				ColNum:  int64(strings.Index(lines[i], phrase)) + 1,
+			}
+		}
+	}
+	return res, nil
 }

@@ -22,12 +22,12 @@ func TestAll_user(t *testing.T) {
 
 func TestAny_user(t *testing.T) {
 
-	ch := Any(context.Background(), "Aang", []string{"../../text1.txt"})  
+	ch := Any(context.Background(), "Aang", []string{"../../text1.txt", "../../text2.txt"})  
 
 	s, ok := <-ch
 
 	if !ok {
-		t.Errorf(" function All error => %v", ok)
+		log.Println("error Any ok =>", ok)
 	}
 
 	log.Println("---------------")
@@ -36,7 +36,6 @@ func TestAny_user(t *testing.T) {
 	log.Println("res.LineNum) => ", s.LineNum)
 	log.Println("res.ColNum) => ", s.ColNum)
 	log.Println("---------------")
-
 
 }
 
